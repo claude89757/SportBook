@@ -1,0 +1,53 @@
+// 全局样式
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+}
+
+body {
+  background-color: #f7f8fa;
+}
+
+// 页面容器
+.page-container {
+  min-height: 100vh;
+  padding-bottom: 60px;
+  background-color: #f7f8fa;
+}
+
+// 通用卡片样式
+.card {
+  margin: 12px;
+  padding: 16px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+// 安全区域
+.safe-area-bottom {
+  padding-bottom: constant(safe-area-inset-bottom);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+// 滑块验证弹窗样式
+.slider-verify-popup {
+  .van-popup {
+    border-radius: 8px;
+    overflow: hidden;
+  }
+}
+
+// 主题色
+:root {
+  --primary-color: #1989fa;
+  --success-color: #07c160;
+  --warning-color: #ff976a;
+  --danger-color: #ee0a24;
+}

@@ -1,0 +1,25 @@
+# 微信小程序源码（不同步到 GitHub）
+sysh_wx_app/
+
+# macOS
+.DS_Store
+
+# Node.js
+node_modules/
+dist/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Build cache
+.cache/
