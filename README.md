@@ -1,45 +1,47 @@
-# SYSH-H5
+# SportBook
 
-H5 移动端体育场馆预约平台，基于 Vue 3 + TypeScript + Vite 5 构建。
+开源的体育场馆预约系统 H5 移动端，支持私有化部署。
 
-## 项目背景
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
+[![Vue](https://img.shields.io/badge/Vue-3.x-brightgreen.svg)](https://vuejs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue.svg)](https://www.typescriptlang.org/)
 
-本项目是基于现有微信小程序进行的 H5 移动端适配开发：
+## 简介
 
-- **原版**: 微信小程序（体育场馆预约系统）
-- **本项目**: H5 移动端版本，是小程序功能的简化定制版
-- **共享后端**: 两个版本使用相同的后端 API 服务
+SportBook 是一个轻量级的体育场馆预约系统，提供场地预订、课程报名、会员管理等核心功能。项目基于 Vue 3 + TypeScript 构建，支持 Docker 一键部署，适合中小型体育场馆快速搭建自己的预约平台。
 
-### 与微信小程序的关系
+### 项目来源
 
-| 对比项 | 微信小程序 | H5 版本 |
-|--------|-----------|---------|
-| 运行环境 | 微信客户端 | 任意浏览器 |
-| 技术栈 | 原生小程序 | Vue 3 + Vant |
-| 功能范围 | 完整功能 | 核心功能简化版 |
-| 用户群体 | 微信用户 | 所有移动端用户 |
+本项目 H5 版本改编自同名微信小程序：
 
-H5 版本参考了小程序的 API 调用方式和业务逻辑，但进行了以下调整：
-- UI 组件从小程序原生组件迁移到 Vant 4
-- 登录认证从微信授权改为手机号 + 短信验证码
-- 移除了部分微信特有功能（如小程序分享、微信支付等）
+| 版本 | 技术栈 | 运行环境 | 功能范围 |
+|------|--------|----------|----------|
+| 微信小程序 | 原生小程序 | 微信客户端 | 完整功能 |
+| **H5 版本** | Vue 3 + Vant 4 | 任意浏览器 | 核心功能 |
+
+两个版本共享同一套后端 API，H5 版本进行了以下适配：
+- 登录方式：微信授权 → 手机号 + 短信验证码
+- UI 组件：小程序原生 → Vant 4 移动端组件库
+- 部署方式：微信平台托管 → Docker 自主部署
 
 ## 功能特性
 
-- 场馆预约：网球、羽毛球、篮球等场地在线预订
-- 课程报名：体育培训课程浏览与报名
-- 会员卡管理：储值卡、次卡查询与使用
-- 订单管理：预约记录查询与管理
-- 用户中心：个人信息、余额、预约历史
+- **场地预约** - 网球、羽毛球、篮球等场地在线预订
+- **课程报名** - 体育培训课程浏览与报名
+- **会员卡** - 储值卡、次卡查询与消费
+- **订单管理** - 预约记录查询、取消
+- **多门店** - 支持连锁场馆切换
 
 ## 技术栈
 
-- **前端框架**: Vue 3 + TypeScript
-- **构建工具**: Vite 5
-- **UI 组件**: Vant 4
-- **状态管理**: Pinia
-- **HTTP 客户端**: Axios
-- **容器化**: Docker + Nginx
+| 类别 | 技术 |
+|------|------|
+| 前端框架 | Vue 3 + TypeScript |
+| 构建工具 | Vite 5 |
+| UI 组件 | Vant 4 |
+| 状态管理 | Pinia |
+| HTTP 客户端 | Axios |
+| 容器化 | Docker + Nginx |
 
 ## 快速开始
 
@@ -57,25 +59,19 @@ npm run dev
 
 访问 http://localhost:5173
 
-### 生产构建
-
-```bash
-npm run build
-```
-
-### Docker 部署
+### 生产部署 (Docker)
 
 ```bash
 cd sysh-h5
 
-# 配置环境变量
+# 1. 配置环境变量
 cp .env.example .env
 vim .env  # 设置 DOMAIN 和 CERT_DIR
 
-# 构建并启动
+# 2. 构建并启动
 docker-compose up -d
 
-# 查看日志
+# 3. 查看日志
 docker-compose logs -f
 ```
 
@@ -84,26 +80,30 @@ docker-compose logs -f
 ```
 sysh-h5/
 ├── src/
-│   ├── api/          # API 接口
+│   ├── api/          # API 接口定义
 │   ├── pages/        # 页面组件
 │   ├── stores/       # Pinia 状态管理
 │   ├── components/   # 公共组件
 │   ├── utils/        # 工具函数
 │   └── router/       # 路由配置
 ├── server/           # Express 代理服务器
-├── nginx/            # Nginx 配置
-├── Dockerfile        # Docker 构建文件
+├── nginx/            # Nginx 配置 (SSL)
+├── Dockerfile
 └── docker-compose.yml
 ```
 
 ## 环境变量
 
-| 变量 | 说明 | 默认值 |
-|------|------|--------|
-| `DOMAIN` | 域名 | - |
-| `CERT_DIR` | SSL 证书目录 | - |
-| `TARGET_API` | 后端 API 地址 | https://sysh.tennis168.vip |
+| 变量 | 必填 | 说明 | 默认值 |
+|------|------|------|--------|
+| `DOMAIN` | ✅ | 部署域名 | - |
+| `CERT_DIR` | ✅ | SSL 证书目录 | - |
+| `TARGET_API` | ❌ | 后端 API 地址 | https://sysh.tennis168.vip |
+
+## 贡献指南
+
+欢迎提交 Issue 和 Pull Request。
 
 ## License
 
-[MIT](./LICENSE)
+[MIT](./LICENSE) © 2025
