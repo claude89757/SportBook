@@ -7,6 +7,7 @@
       <van-tab title="待付款" name="unpaid" />
       <van-tab title="已支付" name="paid" />
       <van-tab title="已退款" name="refunded" />
+      <van-tab title="管理端订场" name="admin_booking" />
     </van-tabs>
 
     <van-pull-refresh v-model="refreshing" @refresh="onRefresh">
@@ -48,6 +49,11 @@
                   <div class="desc-item" v-if="item.create_time">
                     <span class="label">下单时间：</span>{{ item.create_time }}
                   </div>
+                </div>
+                <!-- 订单备注（仅显示） -->
+                <div class="order-mark" v-if="item.mark">
+                  <van-icon name="comment-o" size="14" color="#999" />
+                  <span class="mark-text">{{ item.mark }}</span>
                 </div>
               </div>
             </div>
@@ -623,12 +629,32 @@ async function loadOrders() {
           if (activeTab.value === 'refunded') {
             return item.refund_status > 0
           }
+          if (activeTab.value === 'admin_booking') {
+            return item.mark === '管理端订场'
+          }
           return true
         })
       }
 
       // 合并拆分的子订单
       list = mergeOrders(list)
+
+      // 按场地预约时间排序（升序，最近的预约在上面）
+      list.sort((a: any, b: any) => {
+        // 从 cartInfo 获取预约日期
+        const dateA = a.cartInfo?.[0]?.date || ''
+        const dateB = b.cartInfo?.[0]?.date || ''
+
+        // 如果都有日期，按日期升序排列（最近的在前）
+        if (dateA && dateB) {
+          return dateA.localeCompare(dateB)
+        }
+        // 有日期的排在前面
+        if (dateA) return -1
+        if (dateB) return 1
+        // 都没日期，保持原顺序
+        return 0
+      })
 
       console.log('筛选合并后订单列表:', list.length, '条')
 
@@ -716,6 +742,28 @@ onMounted(() => {
             .label {
               color: #999;
             }
+          }
+        }
+
+        .order-mark {
+          display: flex;
+          align-items: flex-start;
+          gap: 6px;
+          margin-top: 8px;
+          padding: 8px;
+          background: #f8f8f8;
+          border-radius: 4px;
+          font-size: 13px;
+          color: #666;
+
+          .mark-text {
+            flex: 1;
+            line-height: 1.4;
+            word-break: break-all;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
           }
         }
       }
