@@ -15,14 +15,14 @@ All commands are run from the `sysh-h5/` directory:
 npm install
 cd server && npm install && cd ..
 
-# Development (Vite dev server with built-in proxy)
+# Development (Vite dev server)
 npm run dev                    # http://localhost:5173
 
 # Production build
 npm run build                  # Outputs to dist/
 npm run build:check            # TypeScript check + build
 
-# Production server (serves dist/ with API proxy)
+# Production server (serves dist/ static files)
 npm run server                 # http://localhost:3000
 
 # Preview built output
@@ -36,12 +36,10 @@ npm run preview
 - Vant 4 (mobile UI components, auto-imported)
 - Pinia (state management)
 - Axios (HTTP client)
-- Express proxy server for production
+- Express static file server for production
 
-### API Proxy Pattern
-All API requests go through `/proxy/api/*` to avoid CORS issues:
-- **Dev**: Vite proxy → `https://sysh.tennis168.vip`
-- **Prod**: Express server (`server/index.js`) → same backend
+### API Pattern
+Frontend directly requests backend API (`https://sysh.tennis168.vip/api`) - the backend has CORS enabled, so no proxy is needed.
 
 The backend identifies H5 requests via the `Form-type: h5` header added by `utils/request.ts`.
 

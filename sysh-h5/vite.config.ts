@@ -18,20 +18,8 @@ export default defineConfig({
   },
   server: {
     port: 5173,
-    host: '0.0.0.0',
-    proxy: {
-      '/proxy': {
-        target: 'https://sysh.tennis168.vip',
-        changeOrigin: true,
-        secure: false,  // 跳过 SSL 证书验证
-        rewrite: (path) => path.replace(/^\/proxy/, ''),
-        configure: (proxy) => {
-          proxy.on('proxyReq', (proxyReq, req) => {
-            proxyReq.setHeader('Form-type', 'h5')
-          })
-        }
-      }
-    }
+    host: '0.0.0.0'
+    // 代理已移除，前端直连后端 API（后端已配置 CORS）
   },
   build: {
     outDir: 'dist',

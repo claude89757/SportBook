@@ -1,10 +1,14 @@
 import axios, { AxiosRequestConfig, AxiosResponse } from 'axios'
 import { showToast, showLoadingToast, closeToast } from 'vant'
 
+// 直连后端 API（后端已配置 CORS，无需代理）
+const API_BASE_URL = 'https://sysh.tennis168.vip/api'
+
 // 创建 axios 实例
 const request = axios.create({
-  baseURL: '/proxy/api',  // 通过代理访问
-  timeout: 30000
+  baseURL: API_BASE_URL,
+  timeout: 30000,
+  withCredentials: true
 })
 
 // 请求拦截器
