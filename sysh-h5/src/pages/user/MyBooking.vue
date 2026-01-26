@@ -39,7 +39,7 @@
               <div class="booking-name">{{ item.name || item.title }}</div>
               <div class="booking-info">
                 <van-icon name="clock-o" />
-                {{ item.date }} {{ item.time_str }}
+                {{ formatDateWithWeekday(item.date) }} {{ item.time_str }}
               </div>
               <div class="booking-info" v-if="item.store_name">
                 <van-icon name="location-o" />
@@ -71,6 +71,7 @@ import { ref, onMounted } from 'vue'
 import { showConfirmDialog, showLoadingToast, closeToast, showToast } from 'vant'
 import { getBookingList } from '@/api/order'
 import { cancelBook } from '@/api/sports'
+import { formatDateWithWeekday } from '@/utils/date'
 
 const activeTab = ref('all')
 const refreshing = ref(false)

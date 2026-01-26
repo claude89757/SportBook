@@ -98,6 +98,7 @@
 import { ref, onMounted } from 'vue'
 import { showConfirmDialog, showLoadingToast, closeToast, showToast } from 'vant'
 import { getOrderList, cancelOrder as apiCancelOrder, cancelSpaceRecord as apiCancelSpaceRecord, getMySpaceRecords, payOrder as apiPayOrder, refundOrder as apiRefundOrder } from '@/api/order'
+import { formatDateWithWeekday } from '@/utils/date'
 
 const activeTab = ref('all')
 const refreshing = ref(false)
@@ -223,7 +224,7 @@ function getOrderName(item: any) {
 
     if (spaceName) {
       let name = spaceName
-      if (date) name += ` ${date}`
+      if (date) name += ` ${formatDateWithWeekday(date)}`
 
       // 显示所有时段
       if (item.cartInfo.length === 1) {
