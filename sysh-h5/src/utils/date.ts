@@ -52,3 +52,49 @@ export function formatTimestampWithWeekday(timestamp: number | string): string {
 
   return `${month}-${day} ${weekday} ${hours}:${minutes}`
 }
+
+/**
+ * 合并连续的时间段
+ * @param timeSlots 时间段数组，如 ["19:00-20:00", "20:00-21:00", "21:00-22:00"]
+ * @returns 合并后的时间段字符串，如 "19:00-22:00"
+ */
+export function mergeTimeSlots(timeSlots: string[]): string {
+  if (!timeSlots || timeSlots.length === 0) return ''
+  if (timeSlots.length === 1) return timeSlots[0] || ''
+
+  // 支持多种分隔符: "-", "~", " - ", " ~ "
+  const timePattern = /^(\d{1,2}:\d{2})\s*[-~]\s*(\d{1,2}:\d{2})$/
+
+  const parsed: { start: string; end: string; original: string }[] = []
+  for (const slot of timeSlots) {
+    if (!slot) continue
+    const match = slot.match(timePattern)
+    if (match) {
+      parsed.push({ start: match[1], end: match[2], original: slot })
+    } else {
+      // 如果有不匹配的格式，直接返回原始拼接
+      return timeSlots.filter(Boolean).join(', ')
+    }
+  }
+
+  if (parsed.length === 0) return ''
+  if (parsed.length === 1) return parsed[0].original
+
+  // 按开始时间排序
+  parsed.sort((a, b) => a.start.localeCompare(b.start))
+
+  const merged: { start: string; end: string }[] = []
+  let current = { start: parsed[0].start, end: parsed[0].end }
+
+  for (let i = 1; i < parsed.length; i++) {
+    if (current.end === parsed[i].start) {
+      current.end = parsed[i].end
+    } else {
+      merged.push(current)
+      current = { start: parsed[i].start, end: parsed[i].end }
+    }
+  }
+  merged.push(current)
+
+  return merged.map(s => `${s.start}-${s.end}`).join(', ')
+}

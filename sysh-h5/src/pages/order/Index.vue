@@ -119,7 +119,7 @@
 import { ref, onMounted } from 'vue'
 import { showConfirmDialog, showLoadingToast, closeToast, showToast } from 'vant'
 import { getOrderList, cancelOrder as apiCancelOrder, cancelSpaceRecord as apiCancelSpaceRecord, getMySpaceRecords, payOrder as apiPayOrder, refundOrder as apiRefundOrder } from '@/api/order'
-import { formatDateWithWeekday } from '@/utils/date'
+import { formatDateWithWeekday, mergeTimeSlots } from '@/utils/date'
 
 const activeTab = ref('all')
 const refreshing = ref(false)
@@ -207,9 +207,10 @@ function getBookingDateTimeShort(item: any): string {
   if (!item.cartInfo?.length) return ''
   const first = item.cartInfo[0]
   const date = first.date ? formatDateWithWeekday(first.date) : ''  // "01-28 周三"
-  // 显示所有时段，用逗号分隔
-  const times = item.cartInfo.map((c: any) => c.time_show || '').filter(Boolean).join(', ')
-  return `${date} ${times}`.trim()
+  // 提取所有时段并合并连续的时间段
+  const times = item.cartInfo.map((c: any) => c.time_show || '').filter(Boolean)
+  const mergedTimes = mergeTimeSlots(times)
+  return `${date} ${mergedTimes}`.trim()
 }
 
 // status 字段可能是: 0=待支付, 1=待发货, 2=待收货, 3=待评价, 4=已完成, 9=已取消
