@@ -63,8 +63,8 @@ const router = createRouter({
 
 // 路由守卫
 router.beforeEach((to, from, next) => {
-  // 设置页面标题
-  document.title = (to.meta.title as string) || '体育运动预约'
+  // 设置页面标题（固定显示）
+  document.title = 'SYSH场地预订青春版'
 
   // 检查登录状态
   const token = localStorage.getItem('token')

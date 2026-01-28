@@ -334,13 +334,21 @@ async function loadCourts() {
 }
 
 onMounted(async () => {
-  // 如果没有选择门店，先获取门店列表并自动选择第一个
-  if (!storeStore.currentStoreId) {
-    await storeStore.fetchStoreList()
-    if (storeStore.storeList.length > 0) {
-      await storeStore.selectStore(storeStore.storeList[0].id)
-    }
+  // 先获取门店列表
+  await storeStore.fetchStoreList()
+
+  // 检查当前选中的门店是否有效，无效则默认选择沙河店
+  const currentValid = storeStore.currentStoreId &&
+    storeStore.storeList.some(s => s.id === storeStore.currentStoreId)
+
+  if (!currentValid && storeStore.storeList.length > 0) {
+    // 优先选择沙河店
+    const shaheStore = storeStore.storeList.find(s =>
+      (s.name || s.store_name || '').includes('沙河')
+    )
+    await storeStore.selectStore(shaheStore?.id || storeStore.storeList[0].id)
   }
+
   await loadSpaceConfig()
   await loadCourts()
 })

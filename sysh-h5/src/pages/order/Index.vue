@@ -4,10 +4,9 @@
 
     <van-tabs v-model:active="activeTab" sticky @change="onTabChange">
       <van-tab title="全部" name="all" />
-      <van-tab title="待付款" name="unpaid" />
-      <van-tab title="已支付" name="paid" />
+      <van-tab title="待使用" name="pending" />
+      <van-tab title="已使用" name="used" />
       <van-tab title="已退款" name="refunded" />
-      <van-tab title="管理端订场" name="admin_booking" />
     </van-tabs>
 
     <van-pull-refresh v-model="refreshing" @refresh="onRefresh">
@@ -21,48 +20,64 @@
           <div
             v-for="item in orders"
             :key="item.order_id"
-            class="order-item"
+            class="order-card"
+            :class="{ expanded: isExpanded(item.order_id) }"
           >
-            <div class="order-header">
-              <div class="order-header-left">
-                <van-tag class="type-tag" color="#667eea">{{ getTypeName(item) }}</van-tag>
-                <span class="order-no">{{ item._baseOrderId || item.order_id }}</span>
+            <!-- 折叠状态：始终显示的摘要信息（2行布局） -->
+            <div class="card-summary" @click="toggleExpand(item.order_id)">
+              <!-- 第1行：场地+时间+状态+价格 -->
+              <div class="summary-row">
+                <div class="booking-info">
+                  <span class="space-name">{{ getSpaceName(item) }}</span>
+                  <span class="separator">·</span>
+                  <span class="booking-time">{{ getBookingDateTimeShort(item) }}</span>
+                </div>
+                <div class="status-price">
+                  <van-tag :type="getStatusType(item)" size="small">{{ getStatusText(item) }}</van-tag>
+                  <span class="price">¥{{ item.pay_price || item.total_price || 0 }}</span>
+                </div>
               </div>
-              <van-tag :type="getStatusType(item)">
-                {{ getStatusText(item) }}
-              </van-tag>
-            </div>
-
-            <div class="order-content">
-              <div class="order-info">
-                <div class="order-name">{{ getOrderName(item) }}</div>
-                <div class="order-desc-list">
-                  <div class="desc-item" v-if="item.store_name">
-                    <span class="label">门店：</span>{{ item.store_name }}
-                  </div>
-                  <div class="desc-item" v-if="item.total_num">
-                    <span class="label">数量：</span>{{ item.total_num }}
-                  </div>
-                  <div class="desc-item" v-if="item.add_time">
-                    <span class="label">下单时间：</span>{{ formatTime(item.add_time) }}
-                  </div>
-                  <div class="desc-item" v-if="item.create_time">
-                    <span class="label">下单时间：</span>{{ item.create_time }}
-                  </div>
-                </div>
-                <!-- 订单备注（仅显示） -->
-                <div class="order-mark" v-if="item.mark">
-                  <van-icon name="comment-o" size="14" color="#999" />
-                  <span class="mark-text">{{ item.mark }}</span>
-                </div>
+              <!-- 第2行：展开按钮 -->
+              <div class="expand-row">
+                <van-icon :name="isExpanded(item.order_id) ? 'arrow-up' : 'arrow-down'" size="14" color="#999" />
               </div>
             </div>
 
-            <div class="order-footer">
-              <div class="order-price">
-                实付: <span class="price">¥{{ item.pay_price || item.total_price || 0 }}</span>
+            <!-- 展开状态：详细信息 -->
+            <div class="card-detail" v-show="isExpanded(item.order_id)">
+              <div class="detail-list">
+                <div class="detail-item">
+                  <span class="label">订单编号</span>
+                  <span class="value">{{ item._baseOrderId || item.order_id }}</span>
+                </div>
+                <div class="detail-item" v-if="item.store_name">
+                  <span class="label">门店</span>
+                  <span class="value">{{ item.store_name }}</span>
+                </div>
+                <div class="detail-item" v-if="item.cartInfo && item.cartInfo.length > 1">
+                  <span class="label">时段数量</span>
+                  <span class="value">{{ item.cartInfo.length }} 个时段</span>
+                </div>
+                <div class="detail-item" v-if="item.add_time">
+                  <span class="label">下单时间</span>
+                  <span class="value">{{ formatTime(item.add_time) }}</span>
+                </div>
+                <div class="detail-item" v-else-if="item.create_time">
+                  <span class="label">下单时间</span>
+                  <span class="value">{{ item.create_time }}</span>
+                </div>
+                <div class="detail-item" v-if="item.mark">
+                  <span class="label">备注</span>
+                  <span class="value">{{ item.mark }}</span>
+                </div>
+                <div class="detail-item" v-else>
+                  <span class="label">备注</span>
+                  <span class="value text-muted">无</span>
+                </div>
               </div>
-              <div class="order-actions">
+
+              <!-- 操作按钮 -->
+              <div class="card-actions" v-if="canCancel(item) || canRefund(item) || canPay(item)">
                 <van-button
                   v-if="canCancel(item)"
                   size="small"
@@ -79,7 +94,7 @@
                   type="warning"
                   @click.stop="refundOrder(item)"
                 >
-                  {{ (item.type === 11 || item.product_type === 11) ? '取消预约' : '申请退款' }}
+                  取消预约
                 </van-button>
                 <van-button
                   v-if="canPay(item)"
@@ -113,18 +128,88 @@ const finished = ref(false)
 const page = ref(1)
 const orders = ref<any[]>([])
 
-// Tab 筛选配置
-// API 支持的参数: paid (支付状态), refund_status (退款状态)
-interface TabFilter {
-  paid?: number
-  refund_status?: number
+// 折叠状态管理
+const expandedOrders = ref<Set<string>>(new Set())
+
+function toggleExpand(orderId: string) {
+  const newSet = new Set(expandedOrders.value)
+  if (newSet.has(orderId)) {
+    newSet.delete(orderId)
+  } else {
+    newSet.add(orderId)
+  }
+  expandedOrders.value = newSet
 }
 
-const tabFilterMap: Record<string, TabFilter> = {
-  all: {},                    // 全部
-  unpaid: { paid: 0 },        // 待付款
-  paid: { paid: 1 },          // 已支付
-  refunded: { refund_status: 1 }  // 已退款
+function isExpanded(orderId: string): boolean {
+  return expandedOrders.value.has(orderId)
+}
+
+// 判断预约日期是否已过期
+function isBookingExpired(item: any): boolean {
+  const bookingDate = item.cartInfo?.[0]?.date
+  if (!bookingDate) return true // 无日期的视为已过期
+  const today = new Date().toISOString().split('T')[0]
+  return bookingDate < today
+}
+
+// Tab 筛选函数
+type TabFilterFn = (item: any) => boolean
+const tabFilterFns: Record<string, TabFilterFn> = {
+  all: () => true,
+  pending: (item) => item.paid === 1 && item.refund_status === 0 && !isBookingExpired(item),
+  used: (item) => item.paid === 1 && item.refund_status === 0 && isBookingExpired(item),
+  refunded: (item) => item.refund_status > 0
+}
+
+// 排序订单
+function sortOrders(list: any[], tab: string): any[] {
+  return [...list].sort((a, b) => {
+    if (tab === 'all' || tab === 'refunded') {
+      // 按下单时间倒序
+      return (b.add_time || 0) - (a.add_time || 0)
+    }
+    if (tab === 'pending') {
+      // 按场地日期升序（最近的在前）
+      const dateA = a.cartInfo?.[0]?.date || '9999-12-31'
+      const dateB = b.cartInfo?.[0]?.date || '9999-12-31'
+      return dateA.localeCompare(dateB)
+    }
+    if (tab === 'used') {
+      // 按场地日期倒序（最近使用的在前）
+      const dateA = a.cartInfo?.[0]?.date || ''
+      const dateB = b.cartInfo?.[0]?.date || ''
+      return dateB.localeCompare(dateA)
+    }
+    return 0
+  })
+}
+
+// 获取场地名称
+function getSpaceName(item: any): string {
+  return item.cartInfo?.[0]?.space_name || '场地'
+}
+
+// 获取预约日期时间（简洁格式）
+function getBookingDateTime(item: any): string {
+  if (!item.cartInfo?.length) return ''
+  const first = item.cartInfo[0]
+  const date = first.date ? formatDateWithWeekday(first.date) : ''
+  const time = first.time_show || ''
+  if (item.cartInfo.length === 1) {
+    return `${date} ${time}`.trim()
+  }
+  return `${date} ${time} 等${item.cartInfo.length}个时段`
+}
+
+// 获取预约日期时间（用于折叠状态）
+function getBookingDateTimeShort(item: any): string {
+  if (!item.cartInfo?.length) return ''
+  const first = item.cartInfo[0]
+  const date = first.date ? formatDateWithWeekday(first.date) : ''  // "01-28 周三"
+  // 显示所有时段，用逗号分隔
+  const times = item.cartInfo.map((c: any) => c.time_show || '').filter(Boolean).join(', ')
+  return `${date} ${times}`.trim()
 }
 
 // status 字段可能是: 0=待支付, 1=待发货, 2=待收货, 3=待评价, 4=已完成, 9=已取消
@@ -202,12 +287,9 @@ function getStatusText(item: any) {
     const type = item.type || item.product_type
     // 场地预约订单
     if (type === 11) {
-      if (item.status === 0) return '待使用'
-      if (item.status === 1) return '待使用'
-      if (item.status === 2) return '使用中'
-      if (item.status === 3) return '已完成'
-      if (item.status === 4) return '已完成'
-      return '已支付'
+      // 根据预约日期判断
+      if (isBookingExpired(item)) return '已使用'
+      return '待使用'
     }
     // 普通商品订单
     if (item.status === 1) return '待发货'
@@ -218,47 +300,6 @@ function getStatusText(item: any) {
   }
 
   return '未知'
-}
-
-// 获取订单名称，从 cartInfo 提取场地和时间信息
-function getOrderName(item: any) {
-  // 优先从 cartInfo 提取场地预约信息
-  if (item.cartInfo && item.cartInfo.length > 0) {
-    const firstCart = item.cartInfo[0]
-    const spaceName = firstCart.space_name || firstCart.productInfo?.store_name || ''
-    const date = firstCart.date || ''
-
-    if (spaceName) {
-      let name = spaceName
-      if (date) name += ` ${formatDateWithWeekday(date)}`
-
-      // 显示所有时段
-      if (item.cartInfo.length === 1) {
-        const timeShow = firstCart.time_show || ''
-        if (timeShow) name += ` ${timeShow}`
-      } else {
-        // 多个时段，提取并排序显示
-        const times = item.cartInfo
-          .map((c: any) => c.time_show || '')
-          .filter((t: string) => t)
-          .sort()
-        if (times.length > 0) {
-          name += ` ${times.join(', ')}`
-        }
-      }
-      return name
-    }
-  }
-
-  // 其他可能的字段
-  return item.project_title
-    || item.title
-    || item.name
-    || item.goods_name
-    || item.product_name
-    || item.store_name
-    || item.mark
-    || '订单商品'
 }
 
 // 格式化时间戳
@@ -530,6 +571,7 @@ function onTabChange() {
   page.value = 1
   finished.value = false
   orders.value = []
+  expandedOrders.value = new Set() // 切换 Tab 时重置展开状态
   loadOrders()
 }
 
@@ -606,10 +648,6 @@ async function loadOrders() {
       limit: 50  // 获取更多数据以便客户端筛选
     }
 
-    // 尝试使用 API 筛选参数
-    const filter = tabFilterMap[activeTab.value] || {}
-    Object.assign(params, filter)
-
     console.log('加载订单, 参数:', params)
     const res: any = await getOrderList(params)
     console.log('订单响应:', res)
@@ -617,46 +655,19 @@ async function loadOrders() {
     if (res.status === 200 && res.data) {
       let list = res.data.list || res.data || []
 
-      // 客户端筛选（以防 API 不支持筛选参数）
-      if (activeTab.value !== 'all' && Array.isArray(list)) {
-        list = list.filter((item: any) => {
-          if (activeTab.value === 'unpaid') {
-            return item.paid === 0
-          }
-          if (activeTab.value === 'paid') {
-            return item.paid === 1 && item.refund_status === 0
-          }
-          if (activeTab.value === 'refunded') {
-            return item.refund_status > 0
-          }
-          if (activeTab.value === 'admin_booking') {
-            return item.mark === '管理端订场'
-          }
-          return true
-        })
-      }
-
       // 合并拆分的子订单
       list = mergeOrders(list)
 
-      // 按场地预约时间排序（升序，最近的预约在上面）
-      list.sort((a: any, b: any) => {
-        // 从 cartInfo 获取预约日期
-        const dateA = a.cartInfo?.[0]?.date || ''
-        const dateB = b.cartInfo?.[0]?.date || ''
+      // 客户端筛选
+      const filterFn = tabFilterFns[activeTab.value]
+      if (filterFn && activeTab.value !== 'all') {
+        list = list.filter(filterFn)
+      }
 
-        // 如果都有日期，按日期升序排列（最近的在前）
-        if (dateA && dateB) {
-          return dateA.localeCompare(dateB)
-        }
-        // 有日期的排在前面
-        if (dateA) return -1
-        if (dateB) return 1
-        // 都没日期，保持原顺序
-        return 0
-      })
+      // 排序
+      list = sortOrders(list, activeTab.value)
 
-      console.log('筛选合并后订单列表:', list.length, '条')
+      console.log('筛选排序后订单列表:', list.length, '条')
 
       if (page.value === 1) {
         orders.value = Array.isArray(list) ? list : []
@@ -691,106 +702,112 @@ onMounted(() => {
 .order-list {
   padding: 12px;
 
-  .order-item {
+  .order-card {
     background: #fff;
-    border-radius: 8px;
-    padding: 16px;
+    border-radius: 12px;
     margin-bottom: 12px;
+    overflow: hidden;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+    transition: box-shadow 0.2s;
 
-    .order-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 12px;
+    &.expanded {
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
 
-      .order-header-left {
+    // 折叠状态摘要（2行布局）
+    .card-summary {
+      padding: 12px 16px;
+      cursor: pointer;
+
+      .summary-row {
         display: flex;
+        justify-content: space-between;
         align-items: center;
         gap: 8px;
-        flex: 1;
-        min-width: 0;
 
-        .type-tag {
-          flex-shrink: 0;
-        }
-
-        .order-no {
-          font-size: 13px;
-          color: #666;
+        .booking-info {
+          flex: 1;
+          min-width: 0;
+          font-size: 14px;
+          color: #333;
+          white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
-          white-space: nowrap;
+
+          .space-name {
+            font-weight: 500;
+          }
+
+          .separator {
+            margin: 0 4px;
+            color: #999;
+          }
+
+          .booking-time {
+            color: #666;
+          }
         }
+
+        .status-price {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex-shrink: 0;
+
+          .price {
+            font-size: 15px;
+            font-weight: 600;
+            color: #ee0a24;
+          }
+        }
+      }
+
+      .expand-row {
+        display: flex;
+        justify-content: flex-end;
+        padding-top: 4px;
       }
     }
 
-    .order-content {
-      .order-info {
-        .order-name {
-          font-size: 15px;
-          font-weight: 500;
-          color: #333;
-          margin-bottom: 8px;
-        }
+    // 展开状态详情
+    .card-detail {
+      border-top: 1px solid #f5f5f5;
+      padding: 16px;
+      background: #fafafa;
 
-        .order-desc-list {
-          .desc-item {
-            font-size: 13px;
-            color: #666;
-            line-height: 1.8;
+      .detail-list {
+        .detail-item {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          padding: 6px 0;
+          font-size: 13px;
 
-            .label {
-              color: #999;
+          .label {
+            color: #999;
+            flex-shrink: 0;
+            margin-right: 12px;
+          }
+
+          .value {
+            color: #333;
+            text-align: right;
+            word-break: break-all;
+
+            &.text-muted {
+              color: #ccc;
             }
           }
         }
-
-        .order-mark {
-          display: flex;
-          align-items: flex-start;
-          gap: 6px;
-          margin-top: 8px;
-          padding: 8px;
-          background: #f8f8f8;
-          border-radius: 4px;
-          font-size: 13px;
-          color: #666;
-
-          .mark-text {
-            flex: 1;
-            line-height: 1.4;
-            word-break: break-all;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-          }
-        }
-      }
-    }
-
-    .order-footer {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-top: 12px;
-      padding-top: 12px;
-      border-top: 1px solid #f5f5f5;
-
-      .order-price {
-        font-size: 14px;
-
-        .price {
-          font-size: 16px;
-          font-weight: 500;
-          color: #ee0a24;
-        }
       }
 
-      .order-actions {
+      .card-actions {
         display: flex;
+        justify-content: flex-end;
         gap: 8px;
-        flex-wrap: wrap;
+        margin-top: 16px;
+        padding-top: 16px;
+        border-top: 1px solid #eee;
       }
     }
   }
