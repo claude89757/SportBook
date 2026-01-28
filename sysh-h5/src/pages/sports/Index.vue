@@ -25,37 +25,16 @@
         </div>
       </van-tab>
 
-      <van-tab title="课程预约" name="course">
-        <div class="tab-content">
-          <div class="entry-list">
-            <div
-              v-for="item in categories"
-              :key="item.id"
-              class="entry-item"
-              @click="goToCourse(item)"
-            >
-              <img :src="item.image || item.icon" class="entry-icon" />
-              <div class="entry-info">
-                <div class="entry-name">{{ item.name }}课程</div>
-                <div class="entry-desc">{{ item.course_desc || '专业课程' }}</div>
-              </div>
-              <van-icon name="arrow" />
-            </div>
-          </div>
-          <van-empty v-if="categories.length === 0" description="暂无课程" />
-        </div>
-      </van-tab>
     </van-tabs>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { useRouter } from 'vue-router'
 import { getSportsCategory } from '@/api/sports'
 
 const router = useRouter()
-const route = useRoute()
 
 const activeTab = ref('court')
 const categories = ref<any[]>([])
@@ -64,14 +43,6 @@ const categories = ref<any[]>([])
 function goToCourt(item: any) {
   router.push({
     path: '/sports/court',
-    query: { category_id: item.id, name: item.name }
-  })
-}
-
-// 跳转课程列表
-function goToCourse(item: any) {
-  router.push({
-    path: '/sports/course',
     query: { category_id: item.id, name: item.name }
   })
 }
@@ -89,10 +60,6 @@ async function loadCategories() {
 }
 
 onMounted(() => {
-  // 从 query 中获取初始 tab
-  if (route.query.tab === 'course') {
-    activeTab.value = 'course'
-  }
   loadCategories()
 })
 </script>

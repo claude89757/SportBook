@@ -99,7 +99,7 @@ async function buyCard() {
 
     if (res.status === 200) {
       showToast('购买成功')
-      router.push('/user/cards')
+      router.push('/user')
     }
   } catch (error: any) {
     closeToast()

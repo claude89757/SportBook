@@ -14,7 +14,6 @@
             v-for="item in cards"
             :key="item.id"
             class="card-item"
-            @click="goToDetail(item)"
           >
             <div class="card-header" :style="{ background: getCardBg(item.type) }">
               <div class="card-type">{{ item.type_name || '会员卡' }}</div>
@@ -83,11 +82,6 @@ function getCardBg(type: string) {
   return colors[type] || colors.times
 }
 
-// 跳转详情
-function goToDetail(item: any) {
-  router.push(`/cards/${item.id}`)
-}
-
 // 购买卡项
 async function buyCard(item: any) {
   if (!authStore.isLoggedIn) {
@@ -112,7 +106,7 @@ async function buyCard(item: any) {
 
     if (res.status === 200) {
       showToast('购买成功')
-      router.push('/user/cards')
+      router.push('/user')
     }
   } catch (error: any) {
     closeToast()

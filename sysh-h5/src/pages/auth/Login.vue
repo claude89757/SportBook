@@ -223,9 +223,10 @@ async function doLogin() {
 
       showToast('登录成功')
 
-      // 跳转
+      // 跳转（验证 redirect 参数有效性）
       const redirect = route.query.redirect as string
-      router.replace(redirect || '/home')
+      const isValidRedirect = redirect && redirect.startsWith('/') && !redirect.includes('undefined')
+      router.replace(isValidRedirect ? redirect : '/home')
     }
   } catch (error: any) {
     console.error('登录失败:', error)

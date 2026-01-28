@@ -1,5 +1,4 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
 
 const routes = [
   {
@@ -53,6 +52,12 @@ const routes = [
     name: 'Balance',
     component: () => import('@/pages/user/Balance.vue'),
     meta: { title: '我的账户', requiresAuth: true }
+  },
+  // 404 兜底路由（放在最后）
+  {
+    path: '/:pathMatch(.*)*',
+    name: 'NotFound',
+    redirect: '/home'
   }
 ]
 

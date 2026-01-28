@@ -24,7 +24,6 @@
             v-for="item in courses"
             :key="item.id"
             class="course-item"
-            @click="goToDetail(item)"
           >
             <img :src="item.image" class="course-image" v-if="item.image" />
             <div class="course-image placeholder" v-else>
@@ -60,10 +59,9 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { getCourseList, getSportsCategory } from '@/api/sports'
 
-const router = useRouter()
 const route = useRoute()
 
 const title = computed(() => (route.query.name as string) || '课程列表')
@@ -85,11 +83,6 @@ const categoryOptions = computed(() => {
     ...categories.value.map(c => ({ text: c.name, value: c.id }))
   ]
 })
-
-// 跳转详情
-function goToDetail(item: any) {
-  router.push(`/sports/course/${item.id}`)
-}
 
 // 下拉刷新
 async function onRefresh() {
