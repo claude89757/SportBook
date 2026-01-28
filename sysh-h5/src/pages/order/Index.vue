@@ -145,12 +145,49 @@ function isExpanded(orderId: string): boolean {
   return expandedOrders.value.has(orderId)
 }
 
-// 判断预约日期是否已过期
+// 获取中国时区的当前时间
+function getChinaTime(): Date {
+  return new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Shanghai' }))
+}
+
+// 从 time_show (如 "14:00-15:00") 解析结束时间
+function parseEndTime(timeShow: string): string | null {
+  if (!timeShow) return null
+  const match = timeShow.match(/(\d{2}:\d{2})-(\d{2}:\d{2})/)
+  return match ? match[2] : null
+}
+
+// 判断预约是否已过期（考虑时区和时间段）
 function isBookingExpired(item: any): boolean {
-  const bookingDate = item.cartInfo?.[0]?.date
-  if (!bookingDate) return true // 无日期的视为已过期
-  const today = new Date().toISOString().split('T')[0]
-  return bookingDate < today
+  if (!item.cartInfo?.length) return true
+
+  // 取最后一个时段（订单可能包含多个连续时段）
+  const lastBooking = item.cartInfo[item.cartInfo.length - 1]
+  const bookingDate = lastBooking.date
+  if (!bookingDate) return true
+
+  const now = getChinaTime()
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+  const todayStr = `${year}-${month}-${day}`
+
+  // 日期已过 -> 已过期
+  if (bookingDate < todayStr) return true
+
+  // 日期是未来 -> 未过期
+  if (bookingDate > todayStr) return false
+
+  // 日期是今天 -> 检查时间段
+  const endTime = parseEndTime(lastBooking.time_show)
+  if (!endTime) return false  // 无法解析时间，保守地显示待使用
+
+  const [endHour, endMin] = endTime.split(':').map(Number)
+  const currentHour = now.getHours()
+  const currentMin = now.getMinutes()
+
+  // 当前时间 >= 结束时间 -> 已过期
+  return currentHour > endHour || (currentHour === endHour && currentMin >= endMin)
 }
 
 // Tab 筛选函数
