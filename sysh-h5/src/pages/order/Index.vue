@@ -632,16 +632,20 @@ function getBaseOrderId(orderId: string): string {
   return match ? match[1] : orderId
 }
 
-// 合并拆分的子订单
+// 合并拆分的子订单（按 refund_status 分组）
 function mergeOrders(list: any[]): any[] {
+  // 按 baseOrderId + refund_status 分组
   const orderMap = new Map<string, any>()
 
   for (const item of list) {
     const baseOrderId = getBaseOrderId(item.order_id)
+    // 关键：用 refund_status 区分已取消和未取消
+    const isRefunded = item.refund_status > 0
+    const groupKey = `${baseOrderId}_${isRefunded ? 'refunded' : 'active'}`
 
-    if (orderMap.has(baseOrderId)) {
+    if (orderMap.has(groupKey)) {
       // 已存在，合并信息
-      const existing = orderMap.get(baseOrderId)
+      const existing = orderMap.get(groupKey)
 
       // 合并 cartInfo
       if (item.cartInfo && item.cartInfo.length > 0) {
@@ -656,7 +660,6 @@ function mergeOrders(list: any[]): any[] {
       existing.total_num = (existing.total_num || 0) + (item.total_num || 0)
 
       // 保存所有子订单 ID（用于操作）
-      existing._childOrders = existing._childOrders || [existing.order_id]
       existing._childOrders.push(item.order_id)
 
       // 使用最早的下单时间
@@ -669,7 +672,8 @@ function mergeOrders(list: any[]): any[] {
       const newItem = { ...item }
       newItem._baseOrderId = baseOrderId
       newItem._childOrders = [item.order_id]
-      orderMap.set(baseOrderId, newItem)
+      newItem._groupKey = groupKey
+      orderMap.set(groupKey, newItem)
     }
   }
 
