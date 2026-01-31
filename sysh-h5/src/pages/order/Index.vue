@@ -54,9 +54,15 @@
                   <span class="label">门店</span>
                   <span class="value">{{ item.store_name }}</span>
                 </div>
-                <div class="detail-item" v-if="item.cartInfo && item.cartInfo.length > 1">
-                  <span class="label">时段数量</span>
-                  <span class="value">{{ item.cartInfo.length }} 个时段</span>
+                <!-- 时段详情 -->
+                <div class="detail-item time-slots" v-if="item.cartInfo && item.cartInfo.length > 0">
+                  <span class="label">预约时段</span>
+                  <div class="slots-list">
+                    <div class="slot-item" v-for="(slot, index) in item.cartInfo" :key="index">
+                      {{ formatDateWithWeekday(slot.date) }} {{ slot.time_show }}
+                      <span class="slot-space" v-if="slot.space_name">{{ slot.space_name }}</span>
+                    </div>
+                  </div>
                 </div>
                 <div class="detail-item" v-if="item.add_time">
                   <span class="label">下单时间</span>
@@ -838,6 +844,38 @@ onMounted(() => {
 
             &.text-muted {
               color: #ccc;
+            }
+          }
+
+          &.time-slots {
+            flex-direction: column;
+            align-items: flex-start;
+
+            .label {
+              margin-bottom: 8px;
+            }
+
+            .slots-list {
+              width: 100%;
+
+              .slot-item {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 6px 0;
+                font-size: 13px;
+                color: #333;
+                border-bottom: 1px dashed #eee;
+
+                &:last-child {
+                  border-bottom: none;
+                }
+
+                .slot-space {
+                  color: #666;
+                  font-size: 12px;
+                }
+              }
             }
           }
         }
