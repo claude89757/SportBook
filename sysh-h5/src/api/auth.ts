@@ -42,6 +42,14 @@ export function loginMobile(data: {
   return request.post('/login/mobile', data)
 }
 
+// 账号密码登录
+export function loginPassword(data: {
+  account: string
+  password: string
+}) {
+  return request.post('/login', data)
+}
+
 // 获取用户信息
 export function getUserInfo() {
   return request.get('/user')

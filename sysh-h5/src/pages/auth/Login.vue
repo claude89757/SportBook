@@ -6,34 +6,57 @@
     </div>
 
     <div class="login-form">
-      <van-cell-group inset>
-        <van-field
-          v-model="phone"
-          type="tel"
-          label="手机号"
-          placeholder="请输入手机号"
-          maxlength="11"
-          :rules="[{ required: true, message: '请输入手机号' }]"
-        />
-        <van-field
-          v-model="captcha"
-          type="number"
-          label="验证码"
-          placeholder="请输入验证码"
-          maxlength="6"
-        >
-          <template #button>
-            <van-button
-              size="small"
-              type="primary"
-              :disabled="!!countdown"
-              @click="sendCode"
+      <van-tabs v-model:active="loginType" class="login-tabs">
+        <van-tab title="验证码登录" name="sms">
+          <van-cell-group inset>
+            <van-field
+              v-model="phone"
+              type="tel"
+              label="手机号"
+              placeholder="请输入手机号"
+              maxlength="11"
+              :rules="[{ required: true, message: '请输入手机号' }]"
+            />
+            <van-field
+              v-model="captcha"
+              type="number"
+              label="验证码"
+              placeholder="请输入验证码"
+              maxlength="6"
             >
-              {{ countdown ? `${countdown}s后重发` : '获取验证码' }}
-            </van-button>
-          </template>
-        </van-field>
-      </van-cell-group>
+              <template #button>
+                <van-button
+                  size="small"
+                  type="primary"
+                  :disabled="!!countdown"
+                  @click="sendCode"
+                >
+                  {{ countdown ? `${countdown}s后重发` : '获取验证码' }}
+                </van-button>
+              </template>
+            </van-field>
+          </van-cell-group>
+        </van-tab>
+
+        <van-tab title="密码登录" name="password">
+          <van-cell-group inset>
+            <van-field
+              v-model="phone"
+              type="tel"
+              label="手机号"
+              placeholder="请输入手机号"
+              maxlength="11"
+              :rules="[{ required: true, message: '请输入手机号' }]"
+            />
+            <van-field
+              v-model="password"
+              type="password"
+              label="密码"
+              placeholder="请输入密码"
+            />
+          </van-cell-group>
+        </van-tab>
+      </van-tabs>
 
       <div class="login-agreement">
         <van-checkbox v-model="agreed" icon-size="16px">
@@ -47,8 +70,8 @@
         type="primary"
         block
         :loading="loading"
-        :disabled="!canLogin"
-        @click="doLogin"
+        :disabled="loginType === 'sms' ? !canLogin : !canPasswordLogin"
+        @click="loginType === 'sms' ? doLogin() : doPasswordLogin()"
       >
         登录
       </van-button>
@@ -92,15 +115,17 @@ import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { showToast, showLoadingToast, closeToast } from 'vant'
 import SliderVerify from '@/components/SliderVerify/Index.vue'
-import { getVerifyCode, registerVerify, loginMobile, getAgreement } from '@/api/auth'
+import { getVerifyCode, registerVerify, loginMobile, loginPassword, getAgreement } from '@/api/auth'
 import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
 
+const loginType = ref('sms')
 const phone = ref('')
 const captcha = ref('')
+const password = ref('')
 const agreed = ref(false)
 const loading = ref(false)
 const countdown = ref(0)
@@ -115,6 +140,10 @@ const captchaVerification = ref('')
 
 const canLogin = computed(() => {
   return phone.value.length === 11 && captcha.value.length >= 4 && agreed.value
+})
+
+const canPasswordLogin = computed(() => {
+  return phone.value.length === 11 && password.value.length > 0 && agreed.value
 })
 
 // 显示协议
@@ -234,6 +263,51 @@ async function doLogin() {
     loading.value = false
   }
 }
+
+// 密码登录
+async function doPasswordLogin() {
+  if (phone.value.length !== 11) {
+    showToast('请输入正确的手机号')
+    return
+  }
+  if (!password.value) {
+    showToast('请输入密码')
+    return
+  }
+  if (!agreed.value) {
+    showToast('请同意用户协议')
+    return
+  }
+
+  loading.value = true
+
+  try {
+    const res: any = await loginPassword({
+      account: phone.value,
+      password: password.value
+    })
+
+    if (res.status === 200 && res.data) {
+      // 保存 token
+      const token = res.data.token || res.data
+      authStore.setToken(token)
+
+      // 获取用户信息
+      await authStore.fetchUserInfo()
+
+      showToast('登录成功')
+
+      // 跳转（验证 redirect 参数有效性）
+      const redirect = route.query.redirect as string
+      const isValidRedirect = redirect && redirect.startsWith('/') && !redirect.includes('undefined')
+      router.replace(isValidRedirect ? redirect : '/home')
+    }
+  } catch (error: any) {
+    console.error('登录失败:', error)
+  } finally {
+    loading.value = false
+  }
+}
 </script>
 
 <style scoped lang="scss">
@@ -262,6 +336,31 @@ async function doLogin() {
 
 .login-form {
   margin: 0 20px;
+
+  .login-tabs {
+    :deep(.van-tabs__nav) {
+      background: transparent;
+    }
+
+    :deep(.van-tab) {
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 15px;
+    }
+
+    :deep(.van-tab--active) {
+      color: #fff;
+      font-weight: 500;
+    }
+
+    :deep(.van-tabs__line) {
+      background: #fff;
+      width: 40px;
+    }
+
+    :deep(.van-tabs__content) {
+      padding-top: 16px;
+    }
+  }
 
   :deep(.van-cell-group--inset) {
     margin: 0;
